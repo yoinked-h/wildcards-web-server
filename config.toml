@@ -1,11 +1,19 @@
 [privacy]
-arbitrary_access = false #if true, do not check if a file is a wildcard file (__foo__.txt)
-enable_folder_listing = true #if true, show a wildcard listing at /wildcards
-subfolders = false # allow moving folders within the path (could be very dangerous, as a bad actor could use ../../ 
-#                    to access files that are not in the wildcard folder
+# enable folder listing, if true, will list all files in the wildcard folders at /wildcards
+# if false, you need to know the path to the file to access it
+enable_folder_listing = true
+# if false, only files ending in .txt will be served. if true, any file will be served
+arbitrary_files = false
+# if true, allow path traversal attacks (e.g. /../foo.txt). this can and will expose files outside of the wildcard folder
+# to a bad actor. only enable if you know what you're doing and/or don't mind getting pwned.
+path_traversal = false
 
 [server]
-port = 8080    # default port
+# default port is 8080, change if you want to
+port = 8080
+# change to 0.0.0.0 to allow external connections
+bind = "127.0.0.1"
 
 [files]
-wildcard_folders = ["./wildcards"] # default wildcard folders, add more if you want to, will search from first to last
+# list of allowed wildcard folders. paths are relative to server.py
+wildcard_folders = ["./wildcards"]

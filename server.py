@@ -1,55 +1,56 @@
 from pathlib import Path
-import glob
 
-import toml
+from flask import Response
 import flask
 
-cfg = toml.load(Path("config.toml"))
+from config import get_config
+
+
 app = flask.Flask("wildcards-web")
 
-def showallwildcards():
-    finalmsg = ""
-    for path in cfg['files']["wildcard_folders"]:
-        finalmsg += f"<b>{path}</b><br>"
-        for fname in glob.glob(f"{path}/*.txt"):
-            finalmsg += f"<a href={fname.replace(f'{path}/', '').removesuffix('.txt')}>{fname}</a><br>"
-    return finalmsg
+config = get_config()
+work_dir = Path(__file__).absolute()
 
 
-def getwildcard(fname) -> str|None:
-    for possible_path in cfg['files']["wildcard_folders"]:
-        if Path(f"{possible_path}/{fname}.txt").is_file():
-            return f"{possible_path}/{fname}.txt"
-    return None
+@app.route("/wildcards")
+def list_all_wildcards():
+    all_wildcards = ["<h1>All Wildcards</h1>"]
+    folder: Path
+    for folder in config.files.wildcard_folders:
+        all_wildcards.append(f"<h2>/{folder.relative_to(work_dir)}</h2>")
+        file: Path
+        for file in folder.glob("*.txt"):
+            all_wildcards.append(f'<a href="/{folder.name}/{file.name}">{file.stem}</a><br>')
+    return Response("\n".join(all_wildcards), mimetype="text/html")
 
-def getfilecontent(filename):
-    with open(filename, "r", encoding="utf-8") as f:
-        return f.read()
 
-@app.route("/")
-def index():
-    return "cheese"
+@app.route("/<folder>/<path:subpath>")
+def get_wildcard(folder: str, subpath: Path) -> str | None:
+    subpath = Path(subpath)
+    if subpath.suffix != ".txt" and config.privacy.arbitrary_files is False:
+        return Response(status=403)
+    # check if the folder is in the list of wildcard folders
+    folder = next((x for x in config.files.wildcard_folders if x.name == folder), None)
 
+    if folder is not None:
+        # folder is on the list, send the file
+        return flask.send_from_directory(folder, subpath)
+    elif config.privacy.path_traversal is True:
+        # path traversal is enabled, resolve the file path anyway
+        return flask.send_file(work_dir.joinpath(folder, subpath).absolute())
+    else:
+        # path traversal is disabled and folder not on list, return 404
+        return Response(status=404)
+
+
+@app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def getcont(path: str):
-    if path == "wildcards" and cfg['privacy']["enable_folder_listing"]:
-        return showallwildcards()
-    if path == "/favicon.ico":
-        #404
-        return flask.Response(status=404)
-    path = path.replace(".txt", "")
-    if "." in path or "/" in path and not cfg['privacy']['subfolders']:
-        #403
-        return flask.Response(status=403)
-    if not path.startswith("__") or not path.endswith("__") and not cfg["privacy"]['subfolders']:
-        if not cfg['privacy']["arbitrary_access"]:
-            #403
-            return flask.Response(status=403)
-    path = getwildcard(path)
-    if path is not None:
-        return getfilecontent(path)
-    #404
-    return flask.Response(status=404)
+def catch_all(path):
+    return f"{path} is empty or not a valid path. Try <a href='/wildcards'>/wildcards</a>."
+
 
 if __name__ == "__main__":
-    app.run(port=cfg["server"]["port"])
+    app.run(
+        host=config.server.bind,
+        port=config.server.port,
+    )
