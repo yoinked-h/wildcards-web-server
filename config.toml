@@ -1,0 +1,11 @@
+[privacy]
+arbitrary_access = false #if true, do not check if a file is a wildcard file (__foo__.txt)
+enable_folder_listing = true #if true, show a wildcard listing at /wildcards
+subfolders = false # allow moving folders within the path (could be very dangerous, as a bad actor could use ../../ 
+#                    to access files that are not in the wildcard folder
+
+[server]
+port = 8080    # default port
+
+[files]
+wildcard_folders = ["./wildcards"] # default wildcard folders, add more if you want to, will search from first to last
