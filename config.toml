@@ -1,5 +1,6 @@
 [privacy]
-# enable folder listing, if true, will list all files in the wildcard folders at /wildcards
+# enable folder listing, if true, will list all files in the wildcard folders at /wildcards [*]
+# * it wont show subfolders
 # if false, you need to know the path to the file to access it
 enable_folder_listing = true
 # if false, only files ending in .txt will be served. if true, any file will be served
